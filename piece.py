@@ -21,7 +21,7 @@ class Piece:
         self.move_on_several_cases = move_on_several_cases
 
     def __str__(self) :
-        if not self.name : return ""
+        if self.name == None: return ""
         color = "white" if self.color == Color.WHITE else "black"
         return "%s_%s"%(color, self.name)
     
@@ -29,11 +29,13 @@ class Piece:
         return []
 
     def get_captured(self) :
-        self.name = ""
+        self.name = None
         self.color = Color.NONE
         self.vectors = []
         self.move_on_several_cases = False
 
+    def get_promoted(self) :
+        return
 
 class Null(Piece):
     def __init__(self):
@@ -42,12 +44,18 @@ class Null(Piece):
 
 class Pawn(Piece):
     def __init__(self, color):
-        vectors = [-10]
+        vectors = []
         super().__init__("pawn", color, vectors, False)
 
     def get_special_move_vectors(self):
-        vectors = [-9, -11, -20]
+        vectors = [-9, -10, -11, -20]
         return vectors if self.color == Color.WHITE else [ -x for x in vectors]
+
+    def get_promoted(self):
+        self.name = "queen"
+        self.vectors = [-11, -10, -9, -1, +1, +9, +10, +11]
+        self.move_on_several_cases = True
+
 
 class Rook(Piece):
     def __init__(self, color):

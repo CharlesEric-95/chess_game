@@ -49,6 +49,14 @@ class Board:
         self.selected_case = None
         self.selected_case_2 = None
         self.turn = Color.WHITE
+        self.special_moves_authorization = [
+            True, #White castle
+            True, #White castle (queen side)
+            True, #Black castle
+            True, #Black castle (queen side)
+            -1,   #White "en passant" capture
+            -1    #Black "en passant" capture
+        ]
 
     def select_case(self, index) :
         if self.selected_case == None :
@@ -64,6 +72,10 @@ class Board:
     def reset_selected_cases(self):
         self.selected_case = None
         self.selected_case_2 = None
+
+    def teleport(self, departure, arrival):
+        board = self.board
+        board[departure], board[arrival] = board[arrival], board[departure]
 
     def try_move(self):
         if self.selected_case == None : return self.dont_move()
@@ -82,6 +94,11 @@ class Board:
         self.reset_selected_cases()
         board[index_2].get_captured()
         board[index], board[index_2] = board[index_2], board[index]
+        piece = board[index_2]
+        if piece.color == Color.WHITE and index_2 <= 7 :
+            piece.get_promoted()
+        elif piece.color == Color.BLACK and index_2 >= 56:
+            piece.get_promoted()
         self.turn = Color.BLACK if self.turn == Color.WHITE else Color.WHITE
         return True
 
@@ -92,24 +109,98 @@ class Board:
         if self.is_case_already_occupied() : 
             print("Arrival already occupied")
             return False
+        if self.is_path_occupied():
+            print("Path occupied by other pieces")
+            return False
+        if self.is_special_move() : 
+            print("Coup spécial")
+            return self.special_move_legal()
         if not self.is_piece_going_into_the_right_directions() : 
             print("Piece not going into the good directions")
             return False
         return True
 
+    def is_path_occupied(self) :
+        path = self.get_path(self.selected_case, self.selected_case_2)
+        print(path)
+        for case in path : 
+            if self.board[case].name != None: 
+                print(self.board[case].name)
+                return True
+        return False
+
+    def get_path(self, departure, arrival):
+        if departure//8 == arrival//8 : return self.get_path_line(departure, arrival)
+        if departure%8 == arrival%8 : return self.get_path_column(departure, arrival)
+        if self.get_distance(departure) == self.get_distance(arrival) :
+            return self.get_path_diagonal_slash_shape(departure, arrival)
+        if departure%9 == arrival%9 and self.get_distance(departure)%2 == self.get_distance(arrival)%2:
+            return self.get_path_diagonal_anti_slash_shape(departure, arrival)
+        return []
+    
+    def get_path_line(self, departure, arrival):
+        departure, arrival = min(departure, arrival), max(departure, arrival)
+        return [departure + i for i in range(1, arrival-departure)]
+    
+    def get_path_column(self, departure, arrival): 
+        departure, arrival = min(departure, arrival), max(departure, arrival)
+        return [departure + 8*i for i in range(1, arrival//8-departure//8)]
+
+    def get_path_diagonal_slash_shape(self, departure, arrival):
+        departure, arrival = min(departure, arrival), max(departure, arrival)
+        return [departure + 7*i for i in range(1, arrival//7-departure//7)]
+    
+    def get_path_diagonal_anti_slash_shape(self, departure, arrival):
+        departure, arrival = min(departure, arrival), max(departure, arrival)
+        return [departure + 9*i for i in range(1, arrival//9-departure//9)]
+
+    def get_distance(self, index):
+        return index%8 + index//8
+
+    def special_move_legal(self) :
+        piece = self.board[self.selected_case]
+        if piece.name == "king" : return self.king_special_move()
+        if piece.name == "pawn" : return True
+        return False            
+    
+    def king_special_move(self) :
+        arrival = self.selected_case_2
+        #White castle
+        if arrival == 62 and self.special_moves_authorization[0]: 
+            self.teleport(63, 61)
+            return True
+        #White castle (queen side)
+        elif arrival == 58 and self.special_moves_authorization[1]:
+            self.teleport(56, 59)
+            return True
+        #Black castle
+        elif arrival == 6 and self.special_moves_authorization[2]:
+            self.teleport(7, 5)
+            return True
+        #Black castle (queen side)
+        elif arrival == 2 and self.special_moves_authorization[3]:
+            self.teleport(0, 3)
+            return True
+        return False
+
+    def is_special_move(self):
+        return self.is_piece_going_into_the_right_directions(True)
+
     def is_piece_the_good_color(self): 
         colors_match = self.turn == self.board[self.selected_case].color
         return True if colors_match else False
     
-    def is_piece_going_into_the_right_directions(self):
+    def is_piece_going_into_the_right_directions(self, special_move = False):
         case = self.selected_case
         piece = self.board[self.selected_case]
-        print(self.get_reachable_cases(piece, case))
-        return self.selected_case_2 in self.get_reachable_cases(piece, case)
+        print(self.get_reachable_cases(piece, case, special_move))
+        return self.selected_case_2 in self.get_reachable_cases(piece, case, special_move)
 
-    def get_reachable_cases(self, piece, departure):
+    def get_reachable_cases(self, piece, departure, special_move = False):
         reachable_cases = []
-        for vector in piece.vectors:
+        if special_move == False: vectors = piece.vectors
+        else : vectors = piece.get_special_move_vectors()
+        for vector in vectors:
             new_departure = self.board_with_boundaries.index(departure)
             new_case = new_departure + vector
             while self.board_with_boundaries[new_case] != -1 :
