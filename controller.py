@@ -13,7 +13,7 @@ class Chess_Controller:
     def get_selected_case(self, event) :
         case_size = self.chess_graphic_interface.case_size
         column = min(7, max(0, event.x//case_size)) #Avoid border effects 
-        line = min(7, max(0, event.y//case_size)) 
+        line = min(7, max(0, event.y//case_size))   
         selected_index = 8*line + column
         self.chess_model.select_case(selected_index)
         self.update_graphic_interface()

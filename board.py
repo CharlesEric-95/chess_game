@@ -58,36 +58,136 @@ class Board:
             -1    #Black "en passant" capture
         ]
 
+    def get_position(self, piece_name, piece_color):
+        return [
+            index for index in range(64) 
+            if (
+                self.board[index].name == piece_name 
+                and self.board[index].color == piece_color
+            )
+        ]
+
+    def get_all_positions(self, color):
+        return [
+            index for index in range(64) 
+            if self.board[index].color == color
+        ]
+
     def select_case(self, index) :
         if self.selected_case == None :
             self.selected_case = index
         else:
             self.selected_case_2 = index
             self.try_move()
+    
+    def reset_selected_cases(self):
+        self.selected_case = None
+        self.selected_case_2 = None
 
     def get_board_info(self):
         board_info = [str(piece) for piece in self.board]
         return board_info
-
-    def reset_selected_cases(self):
-        self.selected_case = None
-        self.selected_case_2 = None
 
     def teleport(self, departure, arrival):
         board = self.board
         board[departure], board[arrival] = board[arrival], board[departure]
 
     def try_move(self):
+        print("\nTRY TO MOVE")
         if self.selected_case == None : return self.dont_move()
         if self.selected_case_2 == None : return self.dont_move()
-        if not self.move_legal() : return self.dont_move()
+        if not self.is_move_legal(
+            self.selected_case, 
+            self.selected_case_2, 
+            self.get_move_conditions()
+        ):
+            return self.dont_move()
         return self.move()
+
+    def get_move_conditions(self):
+        departure = self.selected_case
+        arrival = self.selected_case_2
+        piece = self.board[departure]
+        if arrival in self.get_reachable_cases(piece, departure, True):
+            if piece.name == "king" and piece.color == Color.WHITE :
+                if arrival == departure+2 :
+                    return "color path unattacked_path arrival castle_w"
+                if arrival == departure-2 :
+                    return "color path unattacked_path arrival castle_wq"
+            if piece.name == "king" and piece.color == Color.BLACK :
+                if arrival == departure+2 :
+                    return "color path unattacked_path arrival castle_b"
+                if arrival == departure-2 :
+                    return "color path unattacked_path arrival castle_bq"
+            if piece.name == "pawn" and piece.color == Color.WHITE :
+                if arrival == departure-16:
+                    return "color path empty_arrival"
+                if arrival == departure-8 :
+                    return "color empty_arrival"
+                if arrival == departure-7 or arrival == departure-9 :
+                    if self.is_case_empty(arrival) :
+                        return "color passant"
+                    return "color hostile_arrival"
+            if piece.name == "pawn" and piece.color == Color.BLACK :
+                if arrival == departure+16:
+                    return "color path empty_arrival"
+                if arrival == departure+8 :
+                    return "color empty_arrival"
+                if arrival == departure+7 or arrival == departure+9 :
+                    if self.is_case_empty(arrival) :
+                        return "color passant"
+                    return "color hostile_arrival"
+        else :
+            return "usual"
+
+    def is_move_legal(self, departure, arrival, keywords = None):
+        if keywords == None : keywords = "usual"
+        keywords = keywords.replace("usual", "color direction path arrival")
+        print("Keywords : %s"%keywords)
+        piece = self.board[departure]
+        hostile_color = Color.WHITE if piece.color == Color.BLACK else Color.BLACK
+        if "color" in keywords and not self.is_piece_the_good_color() : 
+            print("Piece not the good color")
+            return False
+        if "direction" in keywords and not self.is_piece_going_into_the_right_directions():
+            print("Piece not going into the good directions")
+            return False
+        if "path" in keywords and self.is_path_occupied():
+            print("Path occupied by other pieces")
+            return False
+        if "arrival" in keywords and self.is_case_already_occupied(): 
+            print("Arrival already occupied")
+            return False
+        if "check" in keywords and self.is_king_checked(piece.color):
+            print("King checked")
+            return False
+        if "unattacked_path" in keywords and self.is_path_attacked(departure, arrival, hostile_color):
+            print("Path attacked")
+            return False
+        if "empty_arrival" in keywords and not self.is_case_empty(arrival):
+            print("Arrival isn't empty")
+            return False
+        if "hostile_arrival" in keywords and not self.does_case_contains_piece_of_color(arrival, hostile_color):
+            print("Arrival does not contain hostile piece")
+            return False
+        if "castle_w" in keywords and not self.special_moves_authorization[0]:
+            return False
+        if "castle_wq" in keywords and not self.special_moves_authorization[1]:
+            return False
+        if "castle_b" in keywords and not self.special_moves_authorization[2]:
+            return False
+        if "castle_bq" in keywords and not self.special_moves_authorization[3]:
+            return False
+        if "passant" in keywords and not self.can_do_en_passant_capture(departure, arrival):
+            return False
+        return True
 
     def dont_move(self):
         self.reset_selected_cases()
         return False
 
     def move(self):
+        if self.is_special_move() : self.special_move_patterns()
         index = self.selected_case
         index_2 = self.selected_case_2
         board = self.board
@@ -102,32 +202,111 @@ class Board:
         self.turn = Color.BLACK if self.turn == Color.WHITE else Color.WHITE
         return True
 
-    def move_legal(self):
-        if not self.is_piece_the_good_color() : 
-            print("Piece not the good color")
-            return False
-        if self.is_case_already_occupied() : 
-            print("Arrival already occupied")
-            return False
-        if self.is_path_occupied():
-            print("Path occupied by other pieces")
-            return False
-        if self.is_special_move() : 
-            print("Coup spécial")
-            return self.special_move_legal()
-        if not self.is_piece_going_into_the_right_directions() : 
-            print("Piece not going into the good directions")
-            return False
-        return True
+    def special_move_patterns(self):
+        departure = self.selected_case
+        arrival = self.selected_case_2
+        piece = self.board[departure]
+        if piece.name == "king" and piece.color == Color.WHITE :
+            if arrival == departure+2 : #White castle
+                self.teleport(63, 61)
+                return
+            if arrival == departure-2 : #White castle (queen side)
+                self.teleport(56, 59)
+                return
+        if piece.name == "king" and piece.color == Color.BLACK :
+            if arrival == departure+2 : #Black castle
+                self.teleport(7, 5)
+                return
+            if arrival == departure-2 : #Black castle (queen side)
+                self.teleport(0, 3)
+                return
+        if piece.name == "pawn" and piece.color == Color.WHITE :
+            if arrival == departure-7 or arrival == departure-9 :
+                if self.is_case_empty(arrival) :
+                    self.board[arrival-8].get_captured()
+                    return
+        if piece.name == "pawn" and piece.color == Color.BLACK :
+            if arrival == departure+7 or arrival == departure+9 :
+                if self.is_case_empty(arrival) :
+                    self.board[arrival+8].get_captured()
+                    return
+
+    def is_special_move(self):
+        return self.is_piece_going_into_the_right_directions(True)
+    
+    # -------------------------- USUAL VERIFICATIONS ---------------------------
+
+    def is_piece_the_good_color(self): 
+        colors_match = self.turn == self.board[self.selected_case].color
+        return True if colors_match else False
+
+    def is_case_already_occupied(self) :
+        board = self.board
+        selected_case = self.selected_case
+        selected_case_2 = self.selected_case_2
+        return board[selected_case].color == board[selected_case_2].color
+
+    def is_piece_going_into_the_right_directions(self, special_move = False):
+        case = self.selected_case
+        piece = self.board[self.selected_case]
+        print("Reachable cases %s: %s"%(
+            "Special " if special_move else "",
+            self.get_reachable_cases(piece, case, special_move)
+            ))
+        return self.selected_case_2 in self.get_reachable_cases(piece, case, special_move)
 
     def is_path_occupied(self) :
         path = self.get_path(self.selected_case, self.selected_case_2)
-        print(path)
+        print("Path : %s"%path)
         for case in path : 
             if self.board[case].name != None: 
-                print(self.board[case].name)
+                print("Piece on the way : %s"%self.board[case].name)
                 return True
         return False
+
+    # ------------------------- SPECIAL VERIFICATIONS --------------------------
+
+    def is_king_checked(self, color):
+        hostile_color = Color.BLACK if color == Color.WHITE else Color.WHITE
+        position = self.get_position("king", color)
+        return self.is_case_attacked_by(position, hostile_color)
+        """
+        hostile_positions = self.get_all_positions(hostile_color)
+        for position in hostile_position:
+            piece = self.board[position] 
+            if king in self.get_reachable_cases(piece, position):
+                if #Faire un move à conditions variables# :
+                    return True
+        return False
+        """
+
+    def is_path_attacked(self, departure, arrival, hostile_color):
+        path = self.get_path(departure, arrival)
+        for case in path : 
+            if self.is_case_attacked_by(case, hostile_color) : return True
+        return False
+
+    def is_case_empty(self, case):
+        return self.board[case].name == None
+
+    def does_case_contains_piece_of_color(self, case, color):
+        return self.board[case].color == color
+
+    # --------------------------------- OTHERS ---------------------------------
+
+    def get_reachable_cases(self, piece, departure, special_move = False):
+        reachable_cases = []
+        if special_move == False: vectors = piece.vectors
+        else : vectors = piece.get_special_move_vectors()
+        for vector in vectors:
+            new_departure = self.board_with_boundaries.index(departure)
+            new_case = new_departure + vector
+            while self.board_with_boundaries[new_case] != -1 :
+                reachable_cases.append(self.board_with_boundaries[new_case])
+                if piece.move_on_several_cases : new_case += vector
+                else : new_case = 0
+        return reachable_cases
+
 
     def get_path(self, departure, arrival):
         if departure//8 == arrival//8 : return self.get_path_line(departure, arrival)
@@ -157,61 +336,19 @@ class Board:
     def get_distance(self, index):
         return index%8 + index//8
 
-    def special_move_legal(self) :
-        piece = self.board[self.selected_case]
-        if piece.name == "king" : return self.king_special_move()
-        if piece.name == "pawn" : return True
-        return False            
-    
-    def king_special_move(self) :
-        arrival = self.selected_case_2
-        #White castle
-        if arrival == 62 and self.special_moves_authorization[0]: 
-            self.teleport(63, 61)
-            return True
-        #White castle (queen side)
-        elif arrival == 58 and self.special_moves_authorization[1]:
-            self.teleport(56, 59)
-            return True
-        #Black castle
-        elif arrival == 6 and self.special_moves_authorization[2]:
-            self.teleport(7, 5)
-            return True
-        #Black castle (queen side)
-        elif arrival == 2 and self.special_moves_authorization[3]:
-            self.teleport(0, 3)
-            return True
+    def is_case_attacked_by(self, case, hostile_color):
+        return False 
+        #TODO
+        """
+        hostile_pieces = self.get_all_positions(hostile_color)
+        for position in hostile_position:
+            piece = self.board[position] 
+            if case in self.get_reachable_cases(piece, position):
+                if #Faire un move à conditions variables# :
+                    return True
         return False
+        """
 
-    def is_special_move(self):
-        return self.is_piece_going_into_the_right_directions(True)
-
-    def is_piece_the_good_color(self): 
-        colors_match = self.turn == self.board[self.selected_case].color
-        return True if colors_match else False
-    
-    def is_piece_going_into_the_right_directions(self, special_move = False):
-        case = self.selected_case
-        piece = self.board[self.selected_case]
-        print(self.get_reachable_cases(piece, case, special_move))
-        return self.selected_case_2 in self.get_reachable_cases(piece, case, special_move)
-
-    def get_reachable_cases(self, piece, departure, special_move = False):
-        reachable_cases = []
-        if special_move == False: vectors = piece.vectors
-        else : vectors = piece.get_special_move_vectors()
-        for vector in vectors:
-            new_departure = self.board_with_boundaries.index(departure)
-            new_case = new_departure + vector
-            while self.board_with_boundaries[new_case] != -1 :
-                reachable_cases.append(self.board_with_boundaries[new_case])
-                if piece.move_on_several_cases : new_case += vector
-                else : new_case = 0
-        return reachable_cases
-    
-    def is_case_already_occupied(self) :
-        board = self.board
-        selected_case = self.selected_case
-        selected_case_2 = self.selected_case_2
-        return board[selected_case].color == board[selected_case_2].color
-    
+    def can_do_en_passant_capture(self, departure, arrival):
+        return False
+        #TODO
