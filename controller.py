@@ -9,13 +9,18 @@ class Chess_Controller:
     def configure_graphic_functions(self):
         board = self.chess_graphic_interface.get_board()
         board.bind("<Button-1>", self.get_selected_case)
-    
+        board.bind_all("u", self.cancel_last_move)
+
     def get_selected_case(self, event) :
         case_size = self.chess_graphic_interface.case_size
         column = min(7, max(0, event.x//case_size)) #Avoid border effects 
         line = min(7, max(0, event.y//case_size))   
         selected_index = 8*line + column
         self.chess_model.select_case(selected_index)
+        self.update_graphic_interface()
+    
+    def cancel_last_move(self, event):
+        self.chess_model.cancel_last_move()
         self.update_graphic_interface()
 
     def update_graphic_interface(self):

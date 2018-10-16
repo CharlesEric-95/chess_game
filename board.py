@@ -3,6 +3,7 @@
 
 #My files
 from piece import Color, Null, Pawn, Rook, Knight, Bishop, King, Queen
+from move import Move
 
 class Board:
     def __init__(self, player1, player2, graphic_interface) :
@@ -57,6 +58,7 @@ class Board:
             -1,   #White "en passant" capture
             -1    #Black "en passant" capture
         ]
+        self.moves_played=[]
 
     def get_position(self, piece_name, piece_color):
         return [
@@ -187,7 +189,12 @@ class Board:
         return False
 
     def move(self):
-        if self.is_special_move() : self.special_move_patterns()
+        new_move = Move(
+            self.selected_case, 
+            self.selected_case_2, 
+            self.special_moves_authorization[:]
+        )
+        if self.is_special_move() : self.special_move_patterns(new_move)
         index = self.selected_case
         index_2 = self.selected_case_2
         board = self.board
@@ -200,40 +207,64 @@ class Board:
         elif piece.color == Color.BLACK and index_2 >= 56:
             piece.get_promoted()
         self.turn = Color.BLACK if self.turn == Color.WHITE else Color.WHITE
+        self.moves_played.append(new_move)
         return True
 
-    def special_move_patterns(self):
+    def special_move_patterns(self, move):
         departure = self.selected_case
         arrival = self.selected_case_2
         piece = self.board[departure]
         if piece.name == "king" and piece.color == Color.WHITE :
             if arrival == departure+2 : #White castle
                 self.teleport(63, 61)
+                move.special_departure = 63
+                move.special_arrival = 61
                 return
             if arrival == departure-2 : #White castle (queen side)
                 self.teleport(56, 59)
+                move.special_departure = 56
+                move.special_arrival = 59
                 return
         if piece.name == "king" and piece.color == Color.BLACK :
             if arrival == departure+2 : #Black castle
                 self.teleport(7, 5)
+                move.special_departure = 7
+                move.special_arrival = 5
                 return
             if arrival == departure-2 : #Black castle (queen side)
                 self.teleport(0, 3)
+                move.special_departure = 0
+                move.special_arrival = 3
                 return
         if piece.name == "pawn" and piece.color == Color.WHITE :
             if arrival == departure-7 or arrival == departure-9 :
                 if self.is_case_empty(arrival) :
                     self.board[arrival-8].get_captured()
+                    move.case_of_captured_piece = arrival-8
                     return
         if piece.name == "pawn" and piece.color == Color.BLACK :
             if arrival == departure+7 or arrival == departure+9 :
                 if self.is_case_empty(arrival) :
                     self.board[arrival+8].get_captured()
+                    move.case_of_captured_piece = arrival+8
                     return
 
     def is_special_move(self):
         return self.is_piece_going_into_the_right_directions(True)
     
+    def cancel_last_move(self):
+        if len(self.moves_played) == 0 : return
+        last_move = self.moves_played.pop(-1)
+        color_captured = Color.WHITE if self.turn == Color.WHITE else Color.BLACK
+        self.teleport(last_move.arrival, last_move.departure)
+        captured_piece = self.board[last_move.case_of_captured_piece]
+        captured_piece.resurrect(color_captured)
+        if last_move.special_departure != None :
+            self.teleport(last_move.special_arrival, last_move.special_departure)
+        self.special_moves_authorization = last_move.special_moves_authorization
+        self.turn = Color.WHITE if self.turn == Color.BLACK else Color.BLACK
+        
+
     # -------------------------- USUAL VERIFICATIONS ---------------------------
 
     def is_piece_the_good_color(self): 
@@ -268,7 +299,7 @@ class Board:
 
     def is_king_checked(self, color):
         hostile_color = Color.BLACK if color == Color.WHITE else Color.WHITE
-        position = self.get_position("king", color)
+        position = self.get_position("king", color)[0]
         return self.is_case_attacked_by(position, hostile_color)
         """
         hostile_positions = self.get_all_positions(hostile_color)
