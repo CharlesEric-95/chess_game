@@ -14,7 +14,7 @@ class ChessGraphicInterface:
         self.board_size = self.case_size * 8
         #Tkinter zone
         self.master = master
-        self.master.title = "Chess Game"
+        self.master.title("Chess Game")
         self.board = tk.Canvas(
             master = self.master, 
             width = self.board_size, 

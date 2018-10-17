@@ -6,6 +6,8 @@ class Move:
             self,
             departure, arrival,
             special_moves_authorization,
+            captured = False,
+            promotion = False,
             special_departure = None, 
             special_arrival = None, 
             case_of_captured_piece = None
@@ -13,6 +15,8 @@ class Move:
         self.departure = departure
         self.arrival = arrival
         self.special_moves_authorization = special_moves_authorization
+        self.captured = captured
+        self.promotion = promotion
         self.special_departure = special_departure
         self.special_arrival = special_arrival
         if case_of_captured_piece == None:
