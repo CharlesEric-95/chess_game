@@ -7,6 +7,7 @@ from random import randint, choice
 #My files
 from piece import Color, Null, Pawn, Rook, Knight, Bishop, King, Queen
 from move import Move
+from user import User
 
 class Board:
     def __init__(self, player1, player2, graphic_interface) :
@@ -84,28 +85,39 @@ class Board:
             if self.board[index].color == color
         ]
 
+    def play(self):
+        if self.is_check_mate() : 
+            color = "black" if self.turn == Color.WHITE else "white"
+            print("%s wins"%color)
+            return
+        has_played = False
+        if self.turn == Color.WHITE:
+            if self.player1 == User.HUMAN:
+                has_played = self.try_move()
+            if self.player1 == User.COMPUTER:
+                has_played = self.random_move()
+        elif self.turn == Color.BLACK:
+            if self.player2 == User.HUMAN:
+                has_played = self.try_move()
+            if self.player2 == User.COMPUTER:
+                has_played = self.random_move()
+        if has_played : self.play()
+            
+
     def select_case(self, index) :
         if self.selected_case == None :
             self.selected_case = index
         else:
             self.selected_case_2 = index
-            if self.try_move() :
-                if self.is_check_mate(): 
-                    print("White wins")
-                    return
-                else :
-                    self.answer()
-                    if self.is_check_mate(): 
-                        print("Black wins")
-                        return
-                        
-    
-    def answer(self):
+            self.play()
+   
+    def random_move(self):
         departure = choice(self.get_all_positions(self.turn))
         arrival = randint(0,63)
         while not self.try_move(departure, arrival):
             departure = choice(self.get_all_positions(self.turn))
             arrival = randint(0,63)
+        return True
     
     def reset_selected_cases(self):
         self.selected_case = None
