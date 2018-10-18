@@ -89,8 +89,16 @@ class Board:
             self.selected_case = index
         else:
             self.selected_case_2 = index
-            if self.try_move() : 
-                self.answer()
+            if self.try_move() :
+                if self.is_check_mate(): 
+                    print("White wins")
+                    return
+                else :
+                    self.answer()
+                    if self.is_check_mate(): 
+                        print("Black wins")
+                        return
+                        
     
     def answer(self):
         departure = choice(self.get_all_positions(self.turn))
@@ -343,6 +351,19 @@ class Board:
                 print("Piece on the way : %s"%self.board[case].name)
                 return True
         return False
+
+    def is_check_mate(self):
+        if not self.is_king_checked(self.turn): return False
+        positions = self.get_all_positions(self.turn)
+        for position in positions:
+            piece=self.board[position]
+            arrivals = self.get_reachable_cases(piece, position)
+            arrivals += self.get_reachable_cases(piece, position, True)
+            for arrival in arrivals:
+                if self.try_move(position, arrival) :
+                    self.cancel_last_move()
+                    return False
+        return True
 
     # ------------------------- SPECIAL VERIFICATIONS --------------------------
 
