@@ -24,9 +24,6 @@ class Piece:
         if self.name == None: return ""
         color = "white" if self.color == Color.WHITE else "black"
         return "%s_%s"%(color, self.name)
-    
-    def get_special_move_vectors(self):
-        return []
 
     def get_captured(self) :
         self.name = None
@@ -48,14 +45,9 @@ class Null(Piece):
 
 class Pawn(Piece):
     def __init__(self, color):
-        vectors = []
+        vectors = [-9, -10, -11, -20]
         self.promoted = False
         super().__init__("pawn", color, vectors, False)
-    
-    def get_special_move_vectors(self):
-        if self.promoted : return []
-        vectors = [-9, -10, -11, -20]
-        return vectors if self.color == Color.WHITE else [ -x for x in vectors]
 
     def resurrect(self):
         if self.promoted : 
@@ -100,11 +92,8 @@ class Bishop(Piece):
 
 class King(Piece):
     def __init__(self, color):
-        vectors = [-11, -10, -9, -1, +1, +9, +10, +11]
+        vectors = [-11, -10, -9, -2, -1, +1, +2 +9, +10, +11]
         super().__init__("king", color, vectors, False)
-    
-    def get_special_move_vectors(self):
-        return [-2, 2]
 
     def resurrect(self):
         self.__init__(self.former_color)

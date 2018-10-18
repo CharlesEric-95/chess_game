@@ -134,37 +134,35 @@ class Board:
         return self.move(departure, arrival)
 
     def get_move_conditions(self, departure, arrival, veto = ""):
+        conditions =  "color direction path arrival"
         piece = self.board[departure]
-        if arrival in self.get_reachable_cases(piece, departure, True):
-            if piece.name == "king" and piece.color == Color.WHITE :
-                if arrival == departure+2 :
-                    conditions =  "color path check unattacked_path arrival castle_w"
-                elif arrival == departure-2 :
-                    conditions =  "color path check unattacked_path arrival castle_wq"
-            elif piece.name == "king" and piece.color == Color.BLACK :
-                if arrival == departure+2 :
-                    conditions =  "color path check unattacked_path arrival castle_b"
-                elif arrival == departure-2 :
-                    conditions =  "color path check unattacked_path arrival castle_bq"
-            elif piece.name == "pawn" and piece.color == Color.WHITE :
-                if arrival == departure-16:
-                    conditions =  "color path empty_arrival first"
-                elif arrival == departure-8 :
-                    conditions =  "color empty_arrival"
-                elif arrival == departure-7 or arrival == departure-9 :
-                    if self.is_case_empty(arrival) : conditions =  "color passant"
-                    else : conditions =  "color hostile_arrival"
-            elif piece.name == "pawn" and piece.color == Color.BLACK :
-                if arrival == departure+16:
-                    conditions =  "color path empty_arrival first"
-                elif arrival == departure+8 :
-                    conditions =  "color empty_arrival"
-                elif arrival == departure+7 or arrival == departure+9 :
-                    if self.is_case_empty(arrival) : conditions =  "color passant"
-                    else : conditions =  "color hostile_arrival"
-        else :
-            conditions =  "color direction path arrival"
-        
+        if piece.name == "king" and piece.color == Color.WHITE :
+            if arrival == departure+2 :
+                conditions =  "color path check unattacked_path arrival castle_w"
+            elif arrival == departure-2 :
+                conditions =  "color path check unattacked_path arrival castle_wq"
+        elif piece.name == "king" and piece.color == Color.BLACK :
+            if arrival == departure+2 :
+                conditions =  "color path check unattacked_path arrival castle_b"
+            elif arrival == departure-2 :
+                conditions =  "color path check unattacked_path arrival castle_bq"
+        elif piece.name == "pawn" and piece.color == Color.WHITE :
+            if arrival == departure-16:
+                conditions =  "color path empty_arrival first"
+            elif arrival == departure-8 :
+                conditions =  "color empty_arrival"
+            elif arrival == departure-7 or arrival == departure-9 :
+                if self.is_case_empty(arrival) : conditions =  "color passant"
+                else : conditions =  "color hostile_arrival"
+        elif piece.name == "pawn" and piece.color == Color.BLACK :
+            if arrival == departure+16:
+                conditions =  "color path empty_arrival first"
+            elif arrival == departure+8 :
+                conditions =  "color empty_arrival"
+            elif arrival == departure+7 or arrival == departure+9 :
+                if self.is_case_empty(arrival) : conditions =  "color passant"
+                else : conditions =  "color hostile_arrival"
+
         for keyword in veto.split(" ") :
             conditions = conditions.replace(keyword.replace(" ",""), "")
         return conditions
@@ -295,7 +293,14 @@ class Board:
 
 
     def is_special_move(self, departure, arrival):
-        return self.is_piece_going_into_the_right_directions(departure, arrival, True)
+        piece = self.board[departure]
+        if piece.name == "king":
+            if arrival in [departure+2, departure-2] : return True
+        elif piece.name == "pawn":
+            factor = -1 if piece.color == Color.WHITE else +1
+            arrivals = [departure + factor*i for i in [7,8,9,16]]
+            if arrival in arrivals: return True
+        return False
     
     def cancel_last_move(self):
         if len(self.moves_played) == 0 : return
@@ -335,13 +340,10 @@ class Board:
     def is_case_already_occupied_by_team(self, case, color) :
         return self.board[case].color == color
 
-    def is_piece_going_into_the_right_directions(self, departure, arrival, special_move = False):
+    def is_piece_going_into_the_right_directions(self, departure, arrival):
         piece = self.board[departure]
-        print("Reachable cases %s: %s"%(
-            "Special " if special_move else "",
-            self.get_reachable_cases(piece, departure, special_move)
-            ))
-        return arrival in self.get_reachable_cases(piece, departure, special_move)
+        print("Reachable cases %s: "%self.get_reachable_cases(piece, departure))
+        return arrival in self.get_reachable_cases(piece, departure)
 
     def is_path_occupied(self, departure, arrival) :
         path = self.get_path(departure, arrival)
@@ -358,7 +360,6 @@ class Board:
         for position in positions:
             piece=self.board[position]
             arrivals = self.get_reachable_cases(piece, position)
-            arrivals += self.get_reachable_cases(piece, position, True)
             for arrival in arrivals:
                 if self.try_move(position, arrival) :
                     self.cancel_last_move()
@@ -393,11 +394,9 @@ class Board:
         return False
     # --------------------------------- OTHERS ---------------------------------
 
-    def get_reachable_cases(self, piece, departure, special_move = False):
+    def get_reachable_cases(self, piece, departure):
         reachable_cases = []
-        if special_move == False: vectors = piece.vectors
-        else : vectors = piece.get_special_move_vectors()
-        for vector in vectors:
+        for vector in piece.vectors:
             new_departure = self.board_with_boundaries.index(departure)
             new_case = new_departure + vector
             while self.board_with_boundaries[new_case] != -1 :
@@ -445,7 +444,6 @@ class Board:
             if piece.name == "bishop" :
                 print(position, self.get_reachable_cases(piece, position))
             cases = self.get_reachable_cases(piece, position)
-            cases += self.get_reachable_cases(piece, position, True)
             if case in cases:
                 conditions = self.get_move_conditions(position, case, veto="color")
                 if self.is_move_legal(position, case, conditions):
