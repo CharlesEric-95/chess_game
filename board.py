@@ -10,7 +10,7 @@ from move import Move
 from user import User
 
 class Board:
-    def __init__(self, player1, player2, graphic_interface) :
+    def __init__(self, player1, player2, graphic_interface, verbose = False) :
         self.board = [
             Rook(Color.BLACK),
             Knight(Color.BLACK),
@@ -63,6 +63,8 @@ class Board:
             -1    #Black "en passant" capture
         ]
         self.moves_played=[]
+        self.end = False
+        self.verbose = verbose
 
     def get_line(self, case):
         return 8-case//8
@@ -86,10 +88,7 @@ class Board:
         ]
 
     def play(self):
-        if self.is_check_mate() : 
-            color = "black" if self.turn == Color.WHITE else "white"
-            print("%s wins"%color)
-            return
+        if self.end : return
         has_played = False
         if self.turn == Color.WHITE:
             if self.player1 == User.HUMAN:
@@ -101,15 +100,22 @@ class Board:
                 has_played = self.try_move()
             if self.player2 == User.COMPUTER:
                 has_played = self.random_move()
+        if self.is_check_mate() : 
+            color = "black" if self.turn == Color.WHITE else "white"
+            print("%s wins"%color)
+            self.end = True
+            return
         if has_played : self.play()
             
 
     def select_case(self, index) :
         if self.selected_case == None :
             self.selected_case = index
+            return True
         else:
             self.selected_case_2 = index
             self.play()
+            return False
    
     def random_move(self):
         departure = choice(self.get_all_positions(self.turn))
@@ -132,11 +138,10 @@ class Board:
         board[departure], board[arrival] = board[arrival], board[departure]
 
     def try_move(self, departure=None, arrival=None):
-        print("\nTRY TO MOVE")
+        if self.verbose : print("\nTRY TO MOVE %s"%("white" if self.turn == Color.WHITE else "black"))
         if departure == None : departure = self.selected_case
         if arrival == None : arrival = self.selected_case_2
-        if departure == None : return self.dont_move()
-        if arrival == None : return self.dont_move()
+        if departure == None or arrival == None: return self.dont_move()
         if not self.is_move_legal(
             departure, 
             arrival, 
@@ -181,32 +186,32 @@ class Board:
             
 
     def is_move_legal(self, departure, arrival, keywords):
-        print("Keywords : %s"%keywords)
+        if self.verbose: print("Keywords : %s"%(keywords))
         piece = self.board[departure]
         hostile_color = Color.WHITE if piece.color == Color.BLACK else Color.BLACK
         if "color" in keywords and not self.is_piece_the_good_color(piece) : 
-            print("Piece not the good color")
+            if self.verbose: print("Piece not the good color")
             return False
         if "direction" in keywords and not self.is_piece_going_into_the_right_directions(departure, arrival):
-            print("Piece not going into the good directions")
+            if self.verbose: print("Piece not going into the good directions")
             return False
         if "path" in keywords and self.is_path_occupied(departure, arrival):
-            print("Path occupied by other pieces")
+            if self.verbose: print("Path occupied by other pieces")
             return False
         if "arrival" in keywords and self.is_case_already_occupied_by_team(arrival, piece.color): 
-            print("Arrival already occupied")
+            if self.verbose: print("Arrival already occupied")
             return False
         if "check" in keywords and self.is_king_checked(piece.color):
-            print("King checked")
+            if self.verbose: print("King checked")
             return False
         if "unattacked_path" in keywords and self.is_path_attacked(departure, arrival, hostile_color):
-            print("Path attacked")
+            if self.verbose: print("Path attacked")
             return False
         if "empty_arrival" in keywords and not self.is_case_empty(arrival):
-            print("Arrival isn't empty")
+            if self.verbose: print("Arrival isn't empty")
             return False
         if "hostile_arrival" in keywords and not self.does_case_contains_piece_of_color(arrival, hostile_color):
-            print("Arrival does not contain hostile piece")
+            if self.verbose: print("Arrival does not contain hostile piece")
             return False
         if "castle_w" in keywords and not self.special_moves_authorization[0]:
             return False
@@ -223,6 +228,7 @@ class Board:
         return True
 
     def dont_move(self):
+        if self.verbose: print("NO MOVE")
         self.reset_selected_cases()
         return False
 
@@ -315,7 +321,9 @@ class Board:
         return False
     
     def cancel_last_move(self):
+        if self.verbose: print("Last move cancelled.")
         if len(self.moves_played) == 0 : return
+        self.end = False
         last_move = self.moves_played.pop(-1)
         if last_move.promotion: self.board[last_move.arrival].cancel_promotion()
         self.teleport(last_move.arrival, last_move.departure)
@@ -354,15 +362,12 @@ class Board:
 
     def is_piece_going_into_the_right_directions(self, departure, arrival):
         piece = self.board[departure]
-        print("Reachable cases %s: "%self.get_reachable_cases(piece, departure))
         return arrival in self.get_reachable_cases(piece, departure)
 
     def is_path_occupied(self, departure, arrival) :
         path = self.get_path(departure, arrival)
-        print("Path : %s"%path)
         for case in path : 
             if self.board[case].name != None: 
-                print("Piece on the way : %s"%self.board[case].name)
                 return True
         return False
 
@@ -449,19 +454,17 @@ class Board:
         return index%8 + index//8
 
     def is_case_attacked_by(self, case, hostile_color):
-        print("Is case attack %s"%case)
+        if self.verbose: print("Is case %s attacked ?"%case)
         hostile_positions = self.get_all_positions(hostile_color)
         for position in hostile_positions:
             piece = self.board[position] 
-            if piece.name == "bishop" :
-                print(position, self.get_reachable_cases(piece, position))
             cases = self.get_reachable_cases(piece, position)
             if case in cases:
                 conditions = self.get_move_conditions(position, case, veto="color")
                 if self.is_move_legal(position, case, conditions):
-                    print("Yes attacked")
+                    if self.verbose: print("Case %s attacked by %s"%(case, position))
                     return True
-        print("Unattacked")
+        if self.verbose: print("Case %s unattacked"%case)
         return False
 
     def can_do_en_passant_capture(self, departure, arrival):

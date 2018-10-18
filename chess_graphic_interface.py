@@ -29,7 +29,7 @@ class ChessGraphicInterface:
     def get_board(self):
         return self.board
 
-    def draw_board(self) :
+    def draw_board(self, selected_line, selected_column) :
         self.board.delete("all")
         self.board.create_rectangle(
             2,2,self.board_size+1,self.board_size+1,fill=None
@@ -47,6 +47,15 @@ class ChessGraphicInterface:
                 x=0
                 y += self.case_size
                 line += 1
+        
+        if selected_line != None and selected_column != None:
+            y = selected_line*self.case_size
+            x = selected_column*self.case_size
+            self.board.create_rectangle(
+                x, y, x + self.case_size, y + self.case_size,
+                fill= "yellow"
+            )
+
 
     def draw_pieces_on_board(self, board_info) :
         x, y = 0, 0
@@ -73,8 +82,8 @@ class ChessGraphicInterface:
                 x = 0
                 y += self.case_size
 
-    def update(self, board_info):
-        self.draw_board()
+    def update(self, board_info, selected_line, selected_column):
+        self.draw_board(selected_line, selected_column)
         self.draw_pieces_on_board(board_info) 
         self.master.update_idletasks()
         self.master.update()
