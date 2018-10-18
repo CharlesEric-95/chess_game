@@ -3,24 +3,17 @@
 
 #My files
 from piece import Color
+from player import Player, User
 
-class AlphaBeta:
-    def __init__(self, chess_game):
+class AlphaBeta(Player):
+    def __init__(self, ordre, score_function, chess_game=None):
+        self.ordre = ordre
+        self.score_function = score_function
+        self.user = User.COMPUTER
         self.chess_game = chess_game
     
     def get_score(self):
-        if self.chess_game.is_check_mate():
-            if self.chess_game.turn == Color.WHITE : return -1000
-            return 1000
-        score = 0
-        for piece in self.chess_game.board:
-            factor = +1 if piece.color == Color.WHITE else -1
-            if piece.name == "pawn": score += factor*1
-            elif piece.name == "rook": score += factor*5
-            elif piece.name == "knight": score += factor*3
-            elif piece.name == "bishop": score += factor*3
-            elif piece.name == "queen": score += factor*12
-        return score
+        return self.score_function(self.chess_game)
 
     def find_best_move(
             self, depth, best_min = float("inf"), best_max = -float("inf")
@@ -75,7 +68,7 @@ class AlphaBeta:
 
     def play_best_move(self):
         print("IA thinking...")
-        ordre = 4
+        ordre = self.ordre
         score, departure, arrival = self.find_best_move(ordre)
-        print("MinMax results : %s, %s, %s"%(departure, arrival, score))
+        print("AlphaBeta results : %s, %s, %s"%(departure, arrival, score))
         self.chess_game.move(departure, arrival)

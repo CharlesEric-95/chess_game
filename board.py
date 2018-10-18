@@ -7,7 +7,7 @@ from random import randint, choice
 #My files
 from piece import Color, Null, Pawn, Rook, Knight, Bishop, King, Queen
 from move import Move
-from user import User
+from player import User
 
 class Board:
     def __init__(self, player1, player2, graphic_interface, verbose = False) :
@@ -91,22 +91,20 @@ class Board:
         if self.end : return
         has_played = False
         if self.turn == Color.WHITE:
-            if self.player1 == User.HUMAN:
+            if self.player1.user == User.HUMAN:
                 has_played = self.try_move()
-            if self.player1 == User.COMPUTER:
-                has_played = self.random_move()
+            if self.player1.user == User.COMPUTER:
+                has_played = self.player1.play()
         elif self.turn == Color.BLACK:
-            if self.player2 == User.HUMAN:
+            if self.player2.user == User.HUMAN:
                 has_played = self.try_move()
-            if self.player2 == User.COMPUTER:
-                has_played = self.random_move()
+            if self.player2.user == User.COMPUTER:
+                has_played = self.player2.play()
         if self.is_check_mate() : 
-            color = "Black" if self.turn == Color.WHITE else "White"
-            print("%s wins"%color)
+            print("%s wins"%("Black" if self.turn == Color.WHITE else "White"))
             self.end = True
             return
         if has_played : self.play()
-            
 
     def select_case(self, index) :
         if self.selected_case == None :

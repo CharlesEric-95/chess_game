@@ -63,5 +63,6 @@ class Chess_Controller:
 
     def start_game(self) :
         self.configure_graphic_functions()
+        self.chess_model.play()
         self.update_graphic_interface()
         self.chess_graphic_interface.get_master().mainloop()
