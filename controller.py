@@ -6,13 +6,38 @@ class Chess_Controller:
         self.chess_model = chess_model
         self.chess_graphic_interface = chess_graphic_interface
         self.IA = IA
+        self.teleport_departure = None
     
     def configure_graphic_functions(self):
         board = self.chess_graphic_interface.get_board()
         board.bind("<Button-1>", self.get_selected_case)
         board.bind_all("u", self.cancel_last_move)
         board.bind_all("i", self.ia_play)
+        board.bind("<Button-2>", self.kill_or_resurrect)
+        board.bind("<Button-3>", self.teleport)
     
+    def kill_or_resurrect(self, event):
+        case_size = self.chess_graphic_interface.case_size
+        column = min(7, max(0, event.x//case_size)) #Avoid border effects 
+        line = min(7, max(0, event.y//case_size))   
+        selected_index = 8*line + column
+        piece = self.chess_model.board[selected_index]
+        if piece.name == None : piece.resurrect()
+        else : piece.get_captured()
+        self.update_graphic_interface()
+
+    def teleport(self, event):
+        case_size = self.chess_graphic_interface.case_size
+        column = min(7, max(0, event.x//case_size)) #Avoid border effects 
+        line = min(7, max(0, event.y//case_size))   
+        selected_index = 8*line + column
+        if self.teleport_departure == None:
+            self.teleport_departure = selected_index
+        else:
+            self.chess_model.teleport(self.teleport_departure, selected_index)
+            self.teleport_departure = None
+        self.update_graphic_interface()
+
     def ia_play(self, event):
         self.IA.play_best_move()
         self.update_graphic_interface()
