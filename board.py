@@ -101,7 +101,7 @@ class Board:
             if self.player2 == User.COMPUTER:
                 has_played = self.random_move()
         if self.is_check_mate() : 
-            color = "black" if self.turn == Color.WHITE else "white"
+            color = "Black" if self.turn == Color.WHITE else "White"
             print("%s wins"%color)
             self.end = True
             return
