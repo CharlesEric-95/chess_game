@@ -35,7 +35,7 @@ class AlphaBeta(Player):
             piece = self.chess_game.board[position]
             arrivals = self.chess_game.get_reachable_cases(piece, position)
             for arrival in arrivals:
-                if self.chess_game.try_move(position, arrival):
+                if self.chess_game.try_move_bool(position, arrival):
                     new_score,_,_ = self.find_best_move(depth-1, best_min, best_max)
                     self.chess_game.cancel_last_move()
                     if new_score > score:
@@ -54,7 +54,7 @@ class AlphaBeta(Player):
             piece = self.chess_game.board[position]
             arrivals = self.chess_game.get_reachable_cases(piece, position)
             for arrival in arrivals :
-                if self.chess_game.try_move(position, arrival):
+                if self.chess_game.try_move_bool(position, arrival):
                     new_score,_,_ = self.find_best_move(depth-1, best_min, best_max)
                     self.chess_game.cancel_last_move()
                     if new_score < score:
@@ -71,4 +71,4 @@ class AlphaBeta(Player):
         ordre = self.ordre
         score, departure, arrival = self.find_best_move(ordre)
         print("AlphaBeta results : %s, %s, %s"%(departure, arrival, score))
-        self.chess_game.move(departure, arrival)
+        return self.chess_game.move(departure, arrival), departure, arrival

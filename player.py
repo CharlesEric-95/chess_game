@@ -19,8 +19,8 @@ class Player:
         if self.chess_game==None:
             raise ValueError("Chess_game must be added to Player first with player.add_chess_model()")
         else :
-            self.play_best_move()
+            return self.play_best_move()
 
     def play_best_move(self):
-        if self.user == User.HUMAN: return
+        if self.user == User.HUMAN: return False, None, None
         else : raise NotImplementedError('"COMPUTER" player should be written as a child class of Player')

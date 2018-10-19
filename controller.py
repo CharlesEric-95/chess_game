@@ -15,6 +15,25 @@ class Chess_Controller:
         player2.add_chess_game(self.chess_model)
         self.teleport_departure = None
     
+    def get_line_and_column_from_event(self, event):
+        case_size = self.chess_graphic_interface.case_size
+        column = min(8, max(1, event.x//case_size + 1)) #Avoid border effects 
+        line = 9-min(8, max(1, event.y//case_size + 1))
+        return line, column
+    
+    def get_index_from(self, line, column):
+        score = (8-line)*8 + column -1
+        return score
+
+    def get_index_from_event(self, event):
+        return self.get_index_from(*self.get_line_and_column_from_event(event))
+
+    def get_line_and_column_from_index(self, index):
+        return (
+            self.chess_model.get_line(index),
+            self.chess_model.get_column(index)
+        )
+
     def configure_graphic_functions(self):
         board = self.chess_graphic_interface.get_board()
         board.bind("<Button-1>", self.get_selected_case)
@@ -23,20 +42,14 @@ class Chess_Controller:
         board.bind("<Button-3>", self.teleport)
     
     def kill_or_resurrect(self, event):
-        case_size = self.chess_graphic_interface.case_size
-        column = min(7, max(0, event.x//case_size)) #Avoid border effects 
-        line = min(7, max(0, event.y//case_size))   
-        selected_index = 8*line + column
+        selected_index = self.get_index_from_event(event)
         piece = self.chess_model.board[selected_index]
         if piece.name == None : piece.resurrect()
         else : piece.get_captured()
         self.update_graphic_interface()
 
     def teleport(self, event):
-        case_size = self.chess_graphic_interface.case_size
-        column = min(7, max(0, event.x//case_size)) #Avoid border effects 
-        line = min(7, max(0, event.y//case_size))   
-        selected_index = 8*line + column
+        selected_index = self.get_index_from_event(event)
         if self.teleport_departure == None:
             self.teleport_departure = selected_index
         else:
@@ -45,49 +58,51 @@ class Chess_Controller:
         self.update_graphic_interface()
 
     def get_selected_case(self, event) :
-        case_size = self.chess_graphic_interface.case_size
-        column = min(7, max(0, event.x//case_size)) #Avoid border effects 
-        line = min(7, max(0, event.y//case_size))   
-        selected_index = 8*line + column
+        line, column = self.get_line_and_column_from_event(event)
+        selected_index = self.get_index_from(line, column)
         selected_case = self.chess_model.select_case(selected_index)
-        if selected_case: self.update_graphic_interface(line, column)
+        if selected_case: self.update_graphic_interface([(line, column)])
         else : 
             self.play()
-            self.update_graphic_interface()
     
     def cancel_last_move(self, event):
         self.chess_model.cancel_last_move()
         self.update_graphic_interface()
 
-    def update_graphic_interface(self, selected_line=None, selected_column=None):
+    def update_graphic_interface(self, highlited_case=[]):
         self.chess_graphic_interface.update(
-            self.chess_model.get_board_info(),
-            selected_line,
-            selected_column)
+            self.chess_model.get_board_info(), highlited_case
+            )
 
     def play(self):
         if self.chess_model.end : return
-        has_played = False
-        if self.chess_model.turn == Color.WHITE:
-            if self.player1.user == User.HUMAN:
-                has_played = self.chess_model.try_move()
-            if self.player1.user == User.COMPUTER:
-                has_played = self.player1.play()
-            self.update_graphic_interface()
-        elif self.chess_model.turn == Color.BLACK:
-            if self.player2.user == User.HUMAN:
-                has_played = self.chess_model.try_move()
-            if self.player2.user == User.COMPUTER:
-                has_played = self.player2.play()
-            self.update_graphic_interface()
+        has_played, departure, arrival = self.play_a_color(self.chess_model.turn)
+
+        if has_played: 
+            departure = self.get_line_and_column_from_index(departure)
+            arrival = self.get_line_and_column_from_index(arrival)
+            self.update_graphic_interface([departure, arrival])
+
         if self.chess_model.is_check_mate() : 
             print("%s wins"%("Black" if self.chess_model.turn == Color.WHITE else "White"))
             self.chess_model.end = True
-            return
+            return 
+
         if has_played : self.play()
+        return
+
+    def play_a_color(self, color):
+        player = self.player1 if color == Color.WHITE else self.player2
+        if player.user == User.HUMAN:
+            has_played, departure, arrival = self.chess_model.try_move()
+        elif player.user == User.COMPUTER:
+            has_played, departure, arrival = player.play()
+        if departure == None or arrival == None : 
+            return has_played, None, None
+        return has_played, departure, arrival
 
     def start_game(self) :
         self.configure_graphic_functions()
-        self.play()
         self.update_graphic_interface()
+        self.play()
         self.chess_graphic_interface.get_master().mainloop()

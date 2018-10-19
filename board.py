@@ -98,7 +98,7 @@ class Board:
     def random_move(self):
         departure = choice(self.get_all_positions(self.turn))
         arrival = randint(0,63)
-        while not self.try_move(departure, arrival):
+        while not self.try_move_bool(departure, arrival):
             departure = choice(self.get_all_positions(self.turn))
             arrival = randint(0,63)
         return True
@@ -115,18 +115,21 @@ class Board:
         board = self.board
         board[departure], board[arrival] = board[arrival], board[departure]
 
+    def try_move_bool(self, departure=None, arrival=None):
+        return self.try_move(departure, arrival)[0]
+
     def try_move(self, departure=None, arrival=None):
         if self.verbose : print("\nTRY TO MOVE %s"%("white" if self.turn == Color.WHITE else "black"))
         if departure == None : departure = self.selected_case
         if arrival == None : arrival = self.selected_case_2
-        if departure == None or arrival == None: return self.dont_move()
+        if departure == None or arrival == None: return self.dont_move(), None, None
         if not self.is_move_legal(
             departure, 
             arrival, 
             self.get_move_conditions(departure, arrival)
         ):
-            return self.dont_move()
-        return self.move(departure, arrival)
+            return self.dont_move(), None, None
+        return self.move(departure, arrival), departure, arrival
 
     def get_move_conditions(self, departure, arrival, veto = ""):
         conditions =  "color direction path arrival"
@@ -356,7 +359,7 @@ class Board:
             piece=self.board[position]
             arrivals = self.get_reachable_cases(piece, position)
             for arrival in arrivals:
-                if self.try_move(position, arrival) :
+                if self.try_move_bool(position, arrival) :
                     self.cancel_last_move()
                     return False
         return True
