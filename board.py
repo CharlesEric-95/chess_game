@@ -87,32 +87,12 @@ class Board:
             if self.board[index].color == color
         ]
 
-    def play(self):
-        if self.end : return
-        has_played = False
-        if self.turn == Color.WHITE:
-            if self.player1.user == User.HUMAN:
-                has_played = self.try_move()
-            if self.player1.user == User.COMPUTER:
-                has_played = self.player1.play()
-        elif self.turn == Color.BLACK:
-            if self.player2.user == User.HUMAN:
-                has_played = self.try_move()
-            if self.player2.user == User.COMPUTER:
-                has_played = self.player2.play()
-        if self.is_check_mate() : 
-            print("%s wins"%("Black" if self.turn == Color.WHITE else "White"))
-            self.end = True
-            return
-        if has_played : self.play()
-
     def select_case(self, index) :
         if self.selected_case == None :
             self.selected_case = index
             return True
         else:
             self.selected_case_2 = index
-            self.play()
             return False
    
     def random_move(self):
