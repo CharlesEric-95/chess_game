@@ -363,6 +363,28 @@ class Board:
                     self.cancel_last_move()
                     return False
         return True
+    
+    def is_draw(self):
+        if self.draw_only_kings(): return True
+        if self.draw_no_more_moves(): return True
+        return False
+    
+    def draw_only_kings(self):
+        for piece in self.board:
+            if piece.name not in ["king", None]: return False
+        return True
+    
+    def draw_no_more_moves(self):
+        if self.is_king_checked(self.turn): return False
+        positions = self.get_all_positions(self.turn)
+        for position in positions:
+            piece=self.board[position]
+            arrivals = self.get_reachable_cases(piece, position)
+            for arrival in arrivals:
+                if self.try_move_bool(position, arrival) :
+                    self.cancel_last_move()
+                    return False
+        return True
 
     # ------------------------- SPECIAL VERIFICATIONS --------------------------
 

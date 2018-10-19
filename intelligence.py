@@ -18,7 +18,7 @@ class AlphaBeta(Player):
     def find_best_move(
             self, depth, best_min = float("inf"), best_max = -float("inf")
             ):
-        if depth == 0 or self.chess_game.is_check_mate() : 
+        if depth == 0 or self.chess_game.is_check_mate() or self.chess_game.is_draw() : 
             return self.get_score(), None, None
         if self.chess_game.turn == Color.WHITE:
             score, best_departure, best_arrival = self.compute_maxi(depth, best_min, best_max)

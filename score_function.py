@@ -8,6 +8,8 @@ def sum(chess_game):
     if chess_game.is_check_mate():
         if chess_game.turn == Color.WHITE : return -1000
         return 1000
+    if chess_game.is_draw():
+        return 0
     score = 0
     for piece in chess_game.board:
         factor = +1 if piece.color == Color.WHITE else -1

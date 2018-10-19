@@ -15,8 +15,8 @@ import score_function as sf
 
 root = tk.Tk()
 graphic_interface = ChessGraphicInterface(root, 700)
-player2 = Player(User.HUMAN)
-player1 = AlphaBeta(3, sf.sum)
+player1 = Player(User.HUMAN)
+player2 = Player(User.HUMAN) #AlphaBeta(3, sf.sum)
 chess_game = Board(player1, player2, graphic_interface)
 controller = Chess_Controller(chess_game, graphic_interface, player1, player2)
 controller.start_game()

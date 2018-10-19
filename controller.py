@@ -87,6 +87,11 @@ class Chess_Controller:
             print("%s wins"%("Black" if self.chess_model.turn == Color.WHITE else "White"))
             self.chess_model.end = True
             return 
+        
+        if self.chess_model.is_draw():
+            print("Draw")
+            self.chess_model.end = True
+            return
 
         if has_played : self.play()
         return
